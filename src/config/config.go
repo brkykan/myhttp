@@ -1,19 +1,13 @@
 package config
 
 type config struct {
-	Parallel bool
-	URLs     []string
-	Limit    int
+	URLs  []string
+	Limit int
 }
 
 type Configuration interface {
-	ParallelRequestsEnabled() bool
 	GetURLs() []string
 	GetParallelRequestLimit() int
-}
-
-func (c *config) ParallelRequestsEnabled() bool {
-	return c.Parallel
 }
 
 func (c *config) GetURLs() []string {
@@ -22,4 +16,13 @@ func (c *config) GetURLs() []string {
 
 func (c *config) GetParallelRequestLimit() int {
 	return c.Limit
+}
+
+func Setup(urls []string, limit int) Configuration {
+
+	return &config{
+		URLs:  urls,
+		Limit: limit,
+	}
+
 }
