@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"sync"
 )
@@ -35,7 +36,6 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 			continue
 		}
 		wg.Add(1)
-		fmt.Printf("sending url %v into channel\n", url.String())
 		go func() {
 			urlChannel <- url
 		}()
@@ -48,24 +48,36 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 
 	for url := range urlChannel {
 		agent := agent.NewAgent()
-		fmt.Printf("requesting %v\n", url)
-		response, err := agent.PerformGetRequest(url)
+		response, err := agent.MakeRequest(url)
 		if err != nil {
 			log.Printf("Error performing request: %+v\n", err)
 			return
 		}
-		body, err := ioutil.ReadAll(response.Body)
+
+		body, err := getBodyInBytes(response)
 		if err != nil {
 			log.Printf("Error reading response body: %v", err)
-			return
+			continue
 		}
-		hash := md5.New()
-		hashed := hash.Sum(body)
-		md5String := hex.EncodeToString(hashed)
-		fmt.Printf("%v %v\n", url, md5String)
+
+		hashedBody := hashResponse(body)
+		fmt.Printf("%v %v", hashedBody, url.String())
 		wg.Done()
 	}
 }
 
-func printHash(md5String, url string) {
+func getBodyInBytes(response *http.Response) ([]byte, error) {
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
+func hashResponse(body []byte) string {
+	hash := md5.New()
+	hashed := hash.Sum(body)
+	md5String := hex.EncodeToString(hashed)
+	return md5String
 }
