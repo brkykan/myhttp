@@ -2,3 +2,5 @@
 *.a
 bin/*
 pkg/*
+*myhttp
+*project
