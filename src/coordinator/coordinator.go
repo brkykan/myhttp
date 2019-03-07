@@ -37,7 +37,6 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 		wg.Add(1)
 		fmt.Printf("sending url %v into channel\n", url.String())
 		go func() {
-			defer wg.Done()
 			urlChannel <- url
 		}()
 	}
@@ -64,6 +63,7 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 		hashed := hash.Sum(body)
 		md5String := hex.EncodeToString(hashed)
 		fmt.Printf("%v %v\n", url, md5String)
+		wg.Done()
 	}
 }
 
