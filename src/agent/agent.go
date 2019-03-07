@@ -11,12 +11,12 @@ type agent struct {
 }
 
 type Requester interface {
-	PerformGetRequest(url *url.URL) (*http.Response, error)
+	MakeRequest(url *url.URL) (*http.Response, error)
 }
 
-func (a *agent) PerformGetRequest(url *url.URL) (*http.Response, error) {
+func (a *agent) MakeRequest(url *url.URL) (*http.Response, error) {
 	if url.Scheme == "" {
-		url.Scheme = "https"
+		url.Scheme = "http"
 	}
 	resp, err := a.client.Get(url.String())
 	return resp, err
