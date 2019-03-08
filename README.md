@@ -13,6 +13,7 @@ To be able to use the myhttp CLI, you need to build the binary first. You can bu
 cd path/to/location
 git clone https://github.com/brkykan/myhttp.git
 cd myhttp
+source project
 go build
 ```
 
