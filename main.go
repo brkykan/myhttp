@@ -12,9 +12,6 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 	limit := *parallel
-	if limit > 10 {
-		limit = 10
-	}
 
 	configuration := config.Setup(args, limit)
 	coordinator.Run(configuration)
