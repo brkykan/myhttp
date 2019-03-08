@@ -2,28 +2,37 @@ package agent
 
 import (
 	"net/http"
-	"net/url"
+	"strings"
 	"time"
 )
 
-type agent struct {
+type Agent struct {
 	client http.Client
 }
 
+// Requester in an interface that implements MakeRequest function
 type Requester interface {
-	MakeRequest(url *url.URL) (*http.Response, error)
+	MakeRequest(url string) (*http.Response, error)
 }
 
-func (a *agent) MakeRequest(url *url.URL) (*http.Response, error) {
-	if url.Scheme == "" {
-		url.Scheme = "http"
+func (a *Agent) MakeRequest(url string) (*http.Response, error) {
+
+	if !strings.HasPrefix(url, "http://") || !strings.HasPrefix(url, "https://") {
+		url = strings.TrimPrefix(url, "https://")
+		url = strings.TrimPrefix(url, "http://")
+		url = "http://" + url
 	}
-	resp, err := a.client.Get(url.String())
-	return resp, err
+	resp, err := a.client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
+// NewAgent creates and returns a Requester
 func NewAgent() Requester {
-	return &agent{
+	return &Agent{
 		client: http.Client{
 			Timeout: 10 * time.Second, // a sensible time period to deem it as timed out
 		},
