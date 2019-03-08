@@ -5,7 +5,6 @@ import (
 	"config"
 	"context"
 	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -26,8 +25,6 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 
 	var wg sync.WaitGroup
 	urlChannel := make(chan *url.URL, cfg.GetParallelRequestLimit())
-
-	fmt.Println(cfg.GetURLs())
 
 	for _, rawURL := range cfg.GetURLs() {
 		url, err := url.Parse(rawURL)
@@ -51,22 +48,20 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 		response, err := agent.MakeRequest(url)
 		if err != nil {
 			log.Printf("Error performing request: %+v\n", err)
-			return
+			continue
 		}
-
-		body, err := getBodyInBytes(response)
+		body, err := getResponseBody(response)
 		if err != nil {
 			log.Printf("Error reading response body: %v", err)
 			continue
 		}
-
 		hashedBody := hashResponse(body)
-		fmt.Printf("%v %v", hashedBody, url.String())
+		fmt.Printf("%v %v\n", url.String(), hashedBody)
 		wg.Done()
 	}
 }
 
-func getBodyInBytes(response *http.Response) ([]byte, error) {
+func getResponseBody(response *http.Response) ([]byte, error) {
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -76,8 +71,5 @@ func getBodyInBytes(response *http.Response) ([]byte, error) {
 }
 
 func hashResponse(body []byte) string {
-	hash := md5.New()
-	hashed := hash.Sum(body)
-	md5String := hex.EncodeToString(hashed)
-	return md5String
+	return fmt.Sprintf("%x", md5.Sum(body))
 }
