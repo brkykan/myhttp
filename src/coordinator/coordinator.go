@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"sync"
 )
 
@@ -24,18 +23,13 @@ func Run(cfg config.Configuration) {
 func coordinate(ctx context.Context, cfg config.Configuration) {
 
 	var wg sync.WaitGroup
-	urlChannel := make(chan *url.URL, cfg.GetParallelRequestLimit())
+	urlChannel := make(chan string, cfg.GetParallelRequestLimit())
 
 	for _, rawURL := range cfg.GetURLs() {
-		url, err := url.Parse(rawURL)
-		if err != nil {
-			log.Printf("Cannot parse URL %v: %v\n", url, err)
-			continue
-		}
 		wg.Add(1)
-		go func() {
+		go func(url string) {
 			urlChannel <- url
-		}()
+		}(rawURL)
 	}
 
 	go func() {
@@ -43,9 +37,9 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 		close(urlChannel)
 	}()
 
-	for url := range urlChannel {
+	for rawURL := range urlChannel {
 		agent := agent.NewAgent()
-		response, err := agent.MakeRequest(url)
+		response, err := agent.MakeRequest(rawURL)
 		if err != nil {
 			log.Printf("Error performing request: %+v\n", err)
 			continue
@@ -56,7 +50,7 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 			continue
 		}
 		hashedBody := hashResponse(body)
-		fmt.Printf("%v %v\n", url.String(), hashedBody)
+		fmt.Printf("%v %v\n", rawURL, hashedBody)
 		wg.Done()
 	}
 }
