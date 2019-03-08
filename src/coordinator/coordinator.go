@@ -40,6 +40,7 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 	for rawURL := range urlChannel {
 		agent := agent.NewAgent()
 		response, err := agent.MakeRequest(rawURL)
+		wg.Done()
 		if err != nil {
 			log.Printf("Error performing request: %+v\n", err)
 			continue
@@ -51,7 +52,6 @@ func coordinate(ctx context.Context, cfg config.Configuration) {
 		}
 		hashedBody := hashResponse(body)
 		fmt.Printf("%v %v\n", rawURL, hashedBody)
-		wg.Done()
 	}
 }
 
