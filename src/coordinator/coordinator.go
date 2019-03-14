@@ -17,42 +17,11 @@ func Run(cfg config.Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	defer cancel()
-	coordinate(ctx, cfg)
-}
-
-func coordinate(ctx context.Context, cfg config.Configuration) {
 
 	var wg sync.WaitGroup
-	urlChannel := make(chan string, cfg.GetParallelRequestLimit())
-
-	for _, rawURL := range cfg.GetURLs() {
-		wg.Add(1)
-		go func(url string) {
-			urlChannel <- url
-		}(rawURL)
-	}
-
-	go func() {
-		wg.Wait()
-		close(urlChannel)
-	}()
-
-	for rawURL := range urlChannel {
-		agent := agent.NewAgent()
-		response, err := agent.MakeRequest(rawURL)
-		if err != nil {
-			log.Printf("Error performing request: %+v\n", err)
-			continue
-		}
-		body, err := getResponseBody(response)
-		if err != nil {
-			log.Printf("Error reading response body: %v", err)
-			continue
-		}
-		hashedBody := hashResponse(body)
-		fmt.Printf("%v %v\n", rawURL, hashedBody)
-		wg.Done()
-	}
+	wg.Add(len(cfg.GetURLs()))
+	go pool(ctx, &wg, len(cfg.GetURLs()), cfg)
+	wg.Wait()
 }
 
 func getResponseBody(response *http.Response) ([]byte, error) {
@@ -66,4 +35,44 @@ func getResponseBody(response *http.Response) ([]byte, error) {
 
 func hashResponse(body []byte) string {
 	return fmt.Sprintf("%x", md5.Sum(body))
+}
+
+func worker(tasksCh <-chan string, wg *sync.WaitGroup, workerNumber int) {
+	defer wg.Done()
+
+	for {
+		rawURL, ok := <-tasksCh
+		if !ok {
+			return
+		}
+
+		agent := agent.NewAgent()
+		response, err := agent.MakeRequest(rawURL)
+		if err != nil {
+			log.Printf("Error performing request: %+v\n", err)
+			continue
+		}
+		body, err := getResponseBody(response)
+		if err != nil {
+			log.Printf("Error reading response body: %v", err)
+			continue
+		}
+		hashedBody := hashResponse(body)
+		fmt.Printf("Worker number %d produced %v %v\n", workerNumber, rawURL, hashedBody)
+		wg.Done()
+	}
+}
+
+func pool(ctx context.Context, wg *sync.WaitGroup, workers int, cfg config.Configuration) {
+	tasksCh := make(chan string)
+
+	for i := 0; i < workers; i++ {
+		go worker(tasksCh, wg, i)
+	}
+
+	for i := 0; i < len(cfg.GetURLs()); i++ {
+		tasksCh <- cfg.GetURLs()[i]
+	}
+
+	close(tasksCh)
 }
