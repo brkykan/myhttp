@@ -48,6 +48,7 @@ func worker(tasksCh <-chan string, wg *sync.WaitGroup, workerNumber int) {
 
 		agent := agent.NewAgent()
 		response, err := agent.MakeRequest(rawURL)
+		wg.Done()
 		if err != nil {
 			log.Printf("Error performing request: %+v\n", err)
 			continue
